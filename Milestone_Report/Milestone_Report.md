@@ -13,6 +13,8 @@ output:
 
 This report demonstrate the level of competency achievement in working with unstructured text data to produce structured records by analyzing the [Capstone Dataset](https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip) that can then be used for a prediction application. 
 
+R Markdown and Scrip files of the report are in [Mileston Report](https://github.com/frankchi2003/Data-Science-Capstone/tree/master/Milestone_Report)  
+
 ## Explortory Data Analysis
 The very first step of the project is to explore what are included in the raw text data, to do the necessary cleaning, and then to separate out the useful information for build N-gram dataset. The `tidytext` package is major package that used throughout the data analys. Because size of raw data and the running of the codes from very beginning step on preparing report for publication for [RPub.com](https://rpubs.com/) was time consuming this report is based on a 10% sample of the entire data, and I will use these sample data at end of the Capstone Project.
 
