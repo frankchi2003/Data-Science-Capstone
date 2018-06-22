@@ -1,0 +1,266 @@
+---
+title: 'Peer-graded Assignment: Milestone Report'
+author: "Frank Chi"
+date: "June 18, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+dsCourse_folder<- "./dsCourse"
+rds_repo_folder<- "./dsCourse/repo"
+blogs_file   <- "./dsCourse/final/en_US/en_US.blogs.txt"
+news_file    <- "./dsCourse/final/en_US/en_US.news.txt"
+twitter_file <- "./dsCourse/final/en_US/en_US.twitter.txt"  
+sample_pct <- 10 # Data Sampling - 10% 
+```
+
+## Introduction   
+
+This report demonstrate the level of competency achievement in working with unstructured text data to produce structured records by analyzing the [Capstone Dataset](https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip) that can then be used for a prediction application. 
+
+## Explortory Data Analysis
+The very first step of the project is to explore what are included in the raw text data, to do the necessary cleaning, and then to separate out the useful information for build N-gram dataset. The `tidytext` package is major package that used throughout the data analys. Because size of raw data and the running of the codes from very beginning step on preparing report for publication for [RPub.com](https://rpubs.com/) was time consuming this report is based on a `r sample_pct`% sample of the entire data, and I will use these sample data at end of the Capstone Project.
+
+### Tasks
+Following tasks were proceeded:
+
+* download the raw data from [Capstone Dataset](https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip)  
+* download profanity words from [Free Web Header](https://www.freewebheaders.com/full-list-of-bad-words-banned-by-google/)
+* Load data and get summary information
+* Pre-process files, create clean repo dataset
+* Create N-grams repo dataset
+
+## Load data and summary information   
+Three text files, `en_US.blogs`, `en_US.news`, and `en_US.twitter` sourced from [Capstone Dataset](https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip) were read into R. During file loading the `en_US.news` file contained hidden special characters that preventing a full file load and these special characters required hand deletion with an editor prior to file loading.  
+
+```{r repo_summary, echo=FALSE, message=FALSE, warning=FALSE}
+source('file_summary.R')
+repo_summary <- readRDS(file.path(rds_repo_folder, 'repo_summary.rds'))
+knitr::kable(repo_summary)
+```
+
+```{r distplot, echo=FALSE, message=FALSE, warning=FALSE}
+repo_dist <- readRDS(file.path(rds_repo_folder, 'repo_dist.rds'))
+boxplot(repo_dist[[1]], repo_dist[[2]], repo_dist[[3]], log = "y",
+            names = c("blogs", "news", "twitter"),
+            ylab = "log(Number of Characters)", xlab = "File Name") 
+title("Distributions of Chracters per Line")
+    
+```    
+
+## File Pre-processing
+### Sampling the dataset
+Due to R's memory limitation and performance concern I sampled `r sample_pct`% of the lines from each file to facilitate analysis.  
+
+### Clean up and transformation
+The dataset had been performed following clean up:  
+
+* Remove non-alphanumeric's words,  
+* Remove url's,  
+* Remove words of repeated letters more than three times (+3x),  
+* Convert data to lowercase,  
+* Remove english stopwords,  
+* Remove profanity word,  
+* Remove numbers,   
+* Remove punctuation characters, and  
+* Strip Whitespace  
+
+```{r pre_processing, echo=TRUE, message=FALSE, warning=FALSE}
+source('Pre_processing.R')
+```
+
+```{r create_Ngrames, echo=TRUE, message=FALSE, warning=FALSE}
+rm(list=ls())
+source('Ngrams.R')
+```
+
+## Using sampled corpus to create N-grams
+Now we have cleaned sample dataframe. I use `unnest_tokens` to split `text` column of the dataframe into N grames dataframe.
+
+I create a `repo_Ngrams` method on `Ngrams.R` source so that I can use this method to create `unigram`, `bigram`, `trigram`, `quardrgram`, `quintgram`, `sexagram`, `septuagram`, `octogram`, and `nonagram`. I will demonstrate the 1, 2, 3 and 4 N-grams dataframe on the following. 
+
+
+### Word (Uni-gram) and frequencies  
+
+```{r create_ungrame, echo=TRUE, message=FALSE, warning=FALSE} 
+unigram <- repo_Ngrams(1)
+```
+
+__Calculate Word frequencies__  
+
+* Number  of  words: _`r unigram$ngram %>% summarise(keys = n_distinct(words))`_  
+* 50%   of coverage: _`r nrow(unigram$freq %>% filter(coverage <= 0.50))`_  
+* 90%   of coverage: _`r nrow(unigram$freq %>% filter(coverage <= 0.90))`_  
+* 95%   of coverage: _`r nrow(unigram$freq %>% filter(coverage <= 0.95))`_  
+* 99%   of coverage: _`r nrow(unigram$freq %>% filter(coverage <= 0.99))`_  
+
+__Distribution of top 30 Words__  
+
+```{r word_distribution, echo=TRUE, message=FALSE, warning=FALSE}
+unigram$freq %>%
+    filter(coverage <= 0.95) %>%
+    top_n(30, proportion) %>%
+    mutate(Unigram = reorder(words, proportion)) %>%
+    ggplot(aes(Unigram, proportion)) +
+    geom_col(fill='lightblue') + xlab(NULL) + coord_flip()
+```
+
+__Word clouds map__  
+
+World clouds (also known as text clouds or tag clouds) of the top 100 words you can see on the following map.
+```{r word_cloud, echo=TRUE, message=FALSE, warning=FALSE}
+unigram$freq %>%
+    filter(coverage <= 0.95) %>%
+    with(wordcloud(words, n, max.words = 100, 
+                   colors = brewer.pal(6, 'Dark2'), random.order = FALSE))
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+rm(unigram)
+```
+
+## Using sampled corpus to create N-grams
+Now we have cleaned sample dataframe. I use `unnest_tokens` to split `text` column of the dataframe into N grames dataframe.
+
+I create a `repo_Ngrams` method on `Ngrams.R` source so that I can use this method to create `bigram`, `trigram`, `quardrgram`, `quintgram`, `sexagram`, `septuagram`, `octogram`, and `nonagram`. I will demonstrate the 2, 3 and 4 N-grams dataframe on the following. 
+
+### Bi-gram and frequencies  
+
+__Create Bi-gram and calculate frequencies__  
+
+```{r create_bigrame, echo=TRUE, message=FALSE, warning=FALSE} 
+bigram <- repo_Ngrams(2)
+```
+* Number of bigram : _`r bigram$ngram %>% summarise(keys = n_distinct(words))`_  
+* 50%   of coverage: _`r nrow(bigram$freq %>% filter(coverage <= 0.50))`_  
+* 90%   of coverage: _`r nrow(bigram$freq %>% filter(coverage <= 0.90))`_  
+* 95%   of coverage: _`r nrow(bigram$freq %>% filter(coverage <= 0.95))`_  
+* 99%   of coverage: _`r nrow(bigram$freq %>% filter(coverage <= 0.99))`_ 
+
+__Distribution of top 30 Terms__  
+
+```{r distribution_bigram, echo=FALSE, message=FALSE, warning=FALSE}
+bigram$freq %>%
+    filter(coverage <= 0.90) %>%
+    top_n(30, proportion) %>%
+    mutate(Bigram = reorder(words, proportion)) %>%
+    ggplot(aes(Bigram, proportion)) +
+    geom_col(fill='lightblue') + xlab(NULL) + coord_flip()
+```
+
+__Word clouds map of Bi-gram__  
+
+```{r wordcloud_bigram, echo=FALSE, message=FALSE, warning=FALSE}
+bigram$freq %>%
+    filter(coverage <= 0.90) %>%
+    with(wordcloud(words, n, max.words = 100, 
+                   colors = brewer.pal(6, 'Dark2'), random.order = FALSE))
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+rm(bigram)
+```
+
+### Tri-gram and frequencies  
+
+__Create Tri-gram and calculate frequencies__  
+
+```{r create_trigrame, echo=TRUE, message=FALSE, warning=FALSE} 
+trigram <- repo_Ngrams(3)
+```
+* Number of trigram : _`r trigram$ngram %>% summarise(keys = n_distinct(words))`_  
+* 50%   of coverage: _`r nrow(trigram$freq %>% filter(coverage <= 0.50))`_  
+* 90%   of coverage: _`r nrow(trigram$freq %>% filter(coverage <= 0.90))`_  
+* 95%   of coverage: _`r nrow(trigram$freq %>% filter(coverage <= 0.95))`_  
+* 99%   of coverage: _`r nrow(trigram$freq %>% filter(coverage <= 0.99))`_ 
+
+__Distribution of top 30 Terms__  
+
+```{r distribution_trigram, echo=FALSE, message=FALSE, warning=FALSE}
+trigram$freq %>%
+    filter(coverage <= 0.90) %>%
+    top_n(30, proportion) %>%
+    mutate(Trigram = reorder(words, proportion)) %>%
+    ggplot(aes(Trigram, proportion)) +
+    geom_col(fill='lightblue') + xlab(NULL) + coord_flip()
+```
+
+__Word clouds map__  
+
+```{r wordcloud_trigram, echo=FALSE, message=FALSE, warning=FALSE}
+trigram$freq %>%
+    filter(coverage <= 0.90) %>%
+    with(wordcloud(words, n, max.words = 100, 
+                   colors = brewer.pal(6, 'Dark2'), random.order = FALSE))
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+rm(trigram)
+```
+
+### Quadr-gram and frequencies  
+
+__Create Quadr-gram and calculate frequencies__  
+
+```{r create_quadrgram, echo=TRUE, message=FALSE, warning=FALSE} 
+quadrgram <- repo_Ngrams(4)
+```
+* Number of quadrgram : _`r quadrgram$ngram %>% summarise(keys = n_distinct(words))`_  
+* 50%   of coverage: _`r nrow(quadrgram$freq %>% filter(coverage <= 0.50))`_  
+* 90%   of coverage: _`r nrow(quadrgram$freq %>% filter(coverage <= 0.90))`_  
+* 95%   of coverage: _`r nrow(quadrgram$freq %>% filter(coverage <= 0.95))`_  
+* 99%   of coverage: _`r nrow(quadrgram$freq %>% filter(coverage <= 0.99))`_ 
+
+__Distribution of top 30 Terms__  
+
+```{r distribution_quadrgram, echo=FALSE, message=FALSE, warning=FALSE}
+quadrgram$freq %>%
+    filter(coverage <= 0.90) %>%
+    top_n(30, proportion) %>%
+    mutate(Quadrgram = reorder(words, proportion)) %>%
+    ggplot(aes(Quadrgram, proportion)) +
+    geom_col(fill='lightblue') + xlab(NULL) + coord_flip()
+```
+
+__Word clouds map__  
+
+```{r wordcloud_quadrgram, echo=FALSE, message=FALSE, warning=FALSE}
+quadrgram$freq %>%
+    filter(coverage <= 0.90) %>%
+    with(wordcloud(words, n, max.words = 100, 
+                   colors = brewer.pal(6, 'Dark2'), random.order = FALSE))
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+rm(quadrgram)
+```
+
+
+## Further Development Plan: N-Gram model and prediction
+
+Through the exploratory data analysis four n-gram dataframs and frequency tables were created and saved as `RDS` files. These files will be used on next course project for:
+
+* Creating prediction algorithm and 
+* Building Shiny app. 
+
+
+### Code Example - Using N-gram for prediction 
+
+This is a simple example of using Bi-gram to get predicted word by giving `san`. 
+```{r, echo=TRUE}
+
+ngram.predict <- function(str) {
+    s <- str_trim(str)
+    n <- ifelse(length(s) > 0, sapply(gregexpr("\\S+", s), length), 0)
+    r <- NULL
+    repo_ngram <- repo_Ngrams(n+1)
+    r <- repo_ngram$freq[grepl(paste0('^',s,' '), repo_ngram$freq$words),]
+    return(r$words)
+}
+head(ngram.predict('san'))
+head(ngram.predict('amazon kindle'))
+```
+
+
+
